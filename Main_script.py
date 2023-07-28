@@ -7,6 +7,7 @@ Created on Fri Jul 28 13:04:50 2023
 import Scorers as scorer
 import pandas as pd
 import numpy as np
+import Weight_selector as weight_selector
 #import Scorers as scorer
 #Framingham tinker
 #Framingham Risk Score 

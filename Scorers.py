@@ -8,6 +8,7 @@ Created on Thu Jul 27 12:43:14 2023
 """
 import pandas as pd
 import numpy as np
+import Weight_selector as ws
 
 #Scoring sheet can be found here https://onlinelibrary-wiley-com.ezproxy.clarkson.edu/doi/pdf/10.1002/sim.1742
 
@@ -22,15 +23,21 @@ def age_scorer(Patients):
     #############################
     #Compute the age breakdown
     ################################
-    varname="Age"
+    
     agecuts=[0,34,39,44,49,54,59,64,69,74,110]
-    
+    agelist=[]
     #
-    #something like weight_selector(age,sex,treatment,varname)
+    for index,pat in Patients.iterrows():
+        sex=pat['Gender']
+        age=pat['Age']
+        wgtset=ws.weight_selector("Age",sex,age,0)
+        #print(age)
+        print(wgtset)
+        score=pd.cut([age],bins=agecuts,labels=wgtset).astype(int)
+        print(score[0])
+        agelist.append(score[0])
     
-    agescores=[-9,-4,0,3,6,8,10,11,12,13]
-    
-    temp=pd.Series(pd.cut(Patients['Age'],bins=agecuts, labels=agescores))
+    temp=pd.Series(agelist)
     return temp
 
 
@@ -131,6 +138,10 @@ def hdl_scorer(Patients):
     
     temp=pd.Series(pd.cut(Patients['HDL'], bins=cuts, labels=HDLWgt).astype(int))
     
+    
+    
+    
+    
     return temp
     
 def systolic_scorer(Patients):
@@ -149,32 +160,27 @@ def systolic_scorer(Patients):
     
     #establish empty list for storing approriate scores
 
-    systol_scr=[]
-        
-    
+    systollist=[]
     for index,pat in Patients.iterrows():
-        
-        treat=pat['Treat']
-        if treat=="Yes":
-            SystolicWgt=[0,1,2,2,3]
-            
-        elif treat=="No":
-            SystolicWgt=[0,0,1,1,2]
-        elif pat['Systolic']<30:
-            print("this person is possibly dying,dead, or in serious trouble! \\\
+        sex=pat['Gender']
+        age=pat['Age']
+        #treat=pat['Treat']
+        wgtset=ws.weight_selector("Systolic",sex,age,pat['Treat'])
+        #print(age)
+        print(wgtset)
+        score=np.select(systol_criteria[index],wgtset, np.nan).astype(int)
+        print(score[0])
+        systollist.append(score[0])
+
+
+    if pat['Systolic']<30:
+            print(f"Patient {pat.index} is possibly dying,dead, or in serious trouble! \\\
                   Uh oh! Stop filling out the form and help them!")
             #they are invalid, so add missing and move on.
-            systol_scr.append(np.nan)
-    
-        #use selection criteria to assign the appropriate score for that row. 
-        Patients_Systolic=np.select(systol_criteria[index], SystolicWgt ,np.nan)
-        systol_scr.append(Patients_Systolic)
-    #bring it in to the appropriate DF. 
-    temp=pd.Series(systol_scr,name="Systolic_scr").astype(int)
+            systollist.append(np.nan)
+            
+    temp=pd.Series(systollist)
     return temp
-
-
-
 
 
 #######################TESTING
