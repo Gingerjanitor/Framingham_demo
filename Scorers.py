@@ -8,6 +8,7 @@ Created on Thu Jul 27 12:43:14 2023
 """
 import pandas as pd
 import numpy as np
+import Scorers as scorer
 import Weight_selector as ws
 
 #Scoring sheet can be found here https://onlinelibrary-wiley-com.ezproxy.clarkson.edu/doi/pdf/10.1002/sim.1742
@@ -28,13 +29,12 @@ def age_scorer(Patients):
     agelist=[]
     #
     for index,pat in Patients.iterrows():
-        sex=pat['Gender']
         age=pat['Age']
-        wgtset=ws.weight_selector("Age",sex,age,0)
-        #print(age)
-        print(wgtset)
+
+        wgtset=ws.weight_selector("Age",pat['Gender'],pat['Age'],pat['Treat'])
+
         score=pd.cut([age],bins=agecuts,labels=wgtset).astype(int)
-        print(score[0])
+
         agelist.append(score[0])
     
     temp=pd.Series(agelist)
@@ -54,41 +54,20 @@ def cholest_scorer(Patients):
                   pat['Cholest']>=280]
                       for _, pat in Patients.iterrows()]
     
-    
-    cholest_scr=[]
+    cholestlist=[]
     for index,pat in Patients.iterrows():
-        
-        age=pat['Age']
-    
-        if 30<=age<=39:
-            TotalCol=[0,4,7,9,11]
+        wgtset=ws.weight_selector("Cholest",pat['Gender'],pat['Age'],pat['Treat'])
+        score=np.select(cholest_criteria[index],wgtset, np.nan).astype(int)
+        cholestlist.append(score)
             
-        elif 40<=age<=49:
-            TotalCol=[0,3,5,6,8]
-            
-        elif 50<=age<=59:
-            TotalCol=[0,2,3,4,5]
-            
-        elif 60<=age<=69:
-            TotalCol=[0,1,1,2,3]
-            
-        elif 70<=age<=79:
-            TotalCol=[0,0,0,1,1]
-        else:
-            print("this person is over the validated age range")
-            cholest_scr.append(np.nan)
-        Patients_Chol=np.select(cholest_criteria[index], TotalCol ,np.nan)
-        cholest_scr.append(Patients_Chol)
-        
-    temp=pd.Series(cholest_scr,name="Cholest_scr").astype(int)
-    Patients=pd.concat([Patients, temp], axis=1)
-    return Patients['Cholest_scr']
+    temp=pd.Series(cholestlist).astype(int)
+    return temp
+
         
 def smoke_scorer(Patients):
     ###########################
     ###select the apprpriate scores based on age and cholesterol
     ###########################
-    smoke_scr=[]
     
     #establish criteria
     smoke_criteria=[[pat['Smoke']=="No",
@@ -98,30 +77,14 @@ def smoke_scorer(Patients):
     
     for index,pat in Patients.iterrows():
     
-        age=pat['Age']
-    
-        if 30<=age<=39:
-            SmokeWgt=[0,8]
-            
-        elif 40<=age<=49:
-            SmokeWgt=[0,5]
-            
-        elif 50<=age<=59:
-            SmokeWgt=[0,3]
-            
-        elif 60<=age<=69:
-            SmokeWgt=[0,1]
-            
-        elif 70<=age<=79:
-            SmokeWgt=[0,1]
-        else:
-            print("this person is over the validated age range")
-            smoke_scr.append(np.nan)
-        Patients_smoke=np.select(smoke_criteria[index], SmokeWgt ,np.nan)
-        smoke_scr.append(Patients_smoke)
-        
-    finalscores=pd.Series(smoke_scr,name="Smoke_scr").astype(int)
-    return finalscores
+        smokelist=[]
+        for index,pat in Patients.iterrows():
+            wgtset=ws.weight_selector("Smoke",pat['Gender'],pat['Age'],pat['Treat'])
+            score=np.select(smoke_criteria[index],wgtset, np.nan).astype(int)
+            smokelist.append(score)
+                
+        temp=pd.Series(smokelist).astype(int)
+        return temp
 
     
 def hdl_scorer(Patients):
@@ -134,12 +97,11 @@ def hdl_scorer(Patients):
     
     cuts=[0, 39,49,59,150]
     
-    HDLWgt=[-1,0,1,2]
+    #This one is fixed regardless of age and gender, so no weight selector fn.
+    #notice that the order is reversed, since 
+    HDLWgt=[2,1,0,-1]
     
     temp=pd.Series(pd.cut(Patients['HDL'], bins=cuts, labels=HDLWgt).astype(int))
-    
-    
-    
     
     
     return temp
@@ -162,15 +124,10 @@ def systolic_scorer(Patients):
 
     systollist=[]
     for index,pat in Patients.iterrows():
-        sex=pat['Gender']
-        age=pat['Age']
-        #treat=pat['Treat']
-        wgtset=ws.weight_selector("Systolic",sex,age,pat['Treat'])
-        #print(age)
-        print(wgtset)
+
+        wgtset=ws.weight_selector("Systolic",pat['Gender'],pat['Age'],pat['Treat'])
         score=np.select(systol_criteria[index],wgtset, np.nan).astype(int)
-        print(score[0])
-        systollist.append(score[0])
+        systollist.append(score)
 
 
     if pat['Systolic']<30:
@@ -179,34 +136,8 @@ def systolic_scorer(Patients):
             #they are invalid, so add missing and move on.
             systollist.append(np.nan)
             
-    temp=pd.Series(systollist)
+    temp=pd.Series(systollist).astype(int)
     return temp
 
 
 #######################TESTING
-
-import Scorers as scorer
-import pandas as pd
-import numpy as np
-#import Scorers as scorer
-#Framingham tinker
-#Framingham Risk Score 
-
-Patients=pd.read_csv(r"C:\Users\Matt0\test project\Scratch and study files\Framingham practice.txt").rename(
-    columns={'Total_Cholesterol':'Cholest','HDL_Cholesterol':'HDL',
-             'Smoking_Status':'Smoke', 'Systolic_Blood_Pressure':'Systolic',
-             'Treatment_for_High_BP':'Treat'})
-
-
-
-#purge missings if any
-Patients.dropna()
-rawscores=pd.DataFrame()
-rawscores['age_scr']=scorer.age_scorer(Patients)
-rawscores['cholest_scr']=scorer.cholest_scorer(Patients)
-rawscores['hdl_scr']=scorer.hdl_scorer(Patients)
-
-rawscores['smoke_scr']=scorer.smoke_scorer(Patients)
-rawscores['systol_scr']=scorer.systolic_scorer(Patients)
-
-Patients['Framingham']=rawscores.sum(axis=1)
