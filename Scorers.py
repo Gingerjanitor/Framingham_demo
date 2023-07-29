@@ -114,9 +114,9 @@ def systolic_scorer(Patients):
     #establish criteria
 
     systol_criteria=[[pat['Systolic']<120,
-                    (pat['Systolic']>=120) & (pat['Systolic']<129),
-                    (pat['Systolic']>=130) & (pat['Systolic']<139),
-                    (pat['Systolic']>=140) & (pat['Systolic']<159),
+                    (pat['Systolic']>=120) & (pat['Systolic']<=129),
+                    (pat['Systolic']>=130) & (pat['Systolic']<=139),
+                    (pat['Systolic']>=140) & (pat['Systolic']<=159),
                     pat['Systolic']>=160]
                      for _, pat in Patients.iterrows()]
     

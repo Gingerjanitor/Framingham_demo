@@ -42,7 +42,7 @@ def weight_selector(varname,Sex,age,treated):
                            [0,1,1,2,2]]}
         wgtset=Cholest_wgts[Sex][agegroup]
         return wgtset
-    
+
     if varname=="Smoke":
     
         Smoke_wgts={'M':[[0,8],
