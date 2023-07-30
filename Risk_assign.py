@@ -91,15 +91,18 @@ def risk_assign(pat, sex):
     
     riskcatcut=[-1,5,10,15,20,50]
     riskcatlabels=["0-4% risk","5-9% risk", "10-14% risk", "15-19% risk", "20+% risk"]
-    
+    riskcatraw=[0,1,2,3,4]
+    tempdf['Riskcatsnum']=pd.cut(tempdf['Risk_pct'],bins=riskcatcut,labels=riskcatraw,right=False)
     tempdf['Riskcats']=pd.cut(tempdf['Risk_pct'],bins=riskcatcut,labels=riskcatlabels,right=False)
     
     
     ######A second that is just high risk people. That is, you're a core above or below 20
     
-    highriskcut=[-1,15,50]
-    highrisklabel=["<15% risk",">15% risk"]
-    
+    highriskcut=[-1,20,50]
+    highrisklabel=["<20% risk",">20% risk"]
+    highriskraw=[0,1]
+    tempdf['Highrisknum']=pd.cut(tempdf['Risk_pct'],bins=highriskcut,labels=highriskraw)
+
     tempdf['Highrisk']=pd.cut(tempdf['Risk_pct'],bins=highriskcut,labels=highrisklabel)
     
     tempdf=tempdf.drop(['Framingham','Gender','tempcollapse'],axis=1)
