@@ -99,32 +99,16 @@ Patients=analyze.gendata(Patients)
 print("\n\n_____________________________________________\n\n")
 
 
-print(f"""\n\n{ws["C3"].value}\n\n""")
+print(f"""{ws["C3"].value}\n\n""")
 
 analyze.show_risky(Patients)
 
+print("\n\n_____________________________________________\n\n")
 
 
-########STEP 1: Ask if they want to see high risk patients.
-#Show if yes, move on if no
-#
-#get the IDs for people
-atrisk=pd.DataFrame(Patients.loc[Patients['Highrisk']=='>20% risk','Patient_ID'])
-atrisk=pd.merge(atrisk,Patients[['Patient_ID','Risk_pct']], on='Patient_ID')
+analyze.crosstab(Patients)
 
-##sns.histogram(Patients, x='Framingham')
 
-showrisk=str(input(f"Let's put this data to work. \n\n There are {len(atrisk)} people in the dataset with over 20% risk. Perhaps we should notify their care team? Press Y to see their IDs, N to move on \n"))
-while showrisk.lower() not in ['y','n']:
-    showrisk=str(input("Please enter either Y or N \n"))
-
-if showrisk.lower()=="y":
-
-    center="The following patients IDs have above 20% estimated risk of coronary heart disease in the next decade. \n\n Below is each ID and risk % \n"
-    center=center.center(45)
-    print(center)
-    for case in atrisk.itertuples():
-        print(f'Patient ID: {case[1]}, risk of %{case[2]}')
 
 #################
       
@@ -146,26 +130,29 @@ print("simple analysis of these data.\n  \
 
 ### A cross tab and chi square:
     
-showchi=str(input(f"""\n It might be informative to examine if people's forecasted risk is associated with
-                  receiving SNAP benefits. Since SNAP qualification hinges (in part) on socioeconomic 
-                  status it may be a useful generally, but this would help policy advocates to decide
-                  if they should spend time pushing for that new proposal to provide 
-                  low cost cardiac evaluations for SNAP recipients. \n \n 
-                  Should I run the analysis?"""))
-                  
-print(showchi)
+showchi=input(ws['G2'].value)
 while showchi.lower() not in ['y','n']:
     showchi=str(input("Please enter either Y or N \n"))
 
 if showchi.lower()=="y":
+    print("\n\n_____________________________________________\n\n")  
     print("Here's a cross tab of risk scores and SNAP values, calculating percentages along columns. \n\n")
     nopct=pd.crosstab(Patients['Highrisk'],Patients['SNAP'])
     chi, p, df, expected= chi2_contingency(nopct)
     tab=(pd.crosstab(Patients['Highrisk'],Patients['SNAP'],normalize='columns').round(4)*100)
+    cramersv=np.sqrt((chi/len(Patients['SNAP']*(len(tab)-1))))
     print(tab)
     
-    print(f"\nChi-Square= {chi.round(2)}, p={p.round(3)} \n")
+    print(f"\nChi-Square= {chi.round(2)}, p= {p.round(3)}")
+    print(f"Cramer's V= {cramersv.round(3)}")
+
     
+    explain=str(input("\n Shall I provide an interpretation of these results? Y or N?\n"))
+    while explain.lower() not in ['y','n']:
+        explain=str(input("Please enter either Y or N \n"))
+    
+    if explain.lower()=="y":
+        print(ws['G3'].value)
 
     
 
