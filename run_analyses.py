@@ -11,6 +11,11 @@ from openpyxl import load_workbook
 from scipy.stats import chi2_contingency
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy import stats
+import statsmodels.api as sm
+from statsmodels.compat import lzip
+import statsmodels.formula.api as smf
+import statsmodels.stats.api as sms
 
 
 wb=load_workbook("C:/Users/Matt0/test project/Framingham score tool/Script.xlsx")
@@ -23,15 +28,17 @@ def gendata(Patients):
     Patients['Annual_med_costs']=(Patients['Framingham']+.002*Patients['tempcost'])*100
     del Patients['tempcost']
 
-    #dummy up gender for later
-    Patients["Genderdum"]=pd.get_dummies(Patients['Gender'],prefix='num',drop_first=True)
 
     #An indicator of if they are a snap recipient or not
     Patients['SNAP']=np.random.default_rng().choice(["no","yes"],len(Patients['Gender']))
     #doctor it so Patients is correlated with high risk by randomly assigning some of the snap people to be high risk.
     rand=np.random.randint(0,100,250)
     Patients.loc[(rand>=35) & (Patients['Highrisk']==">20% risk"), 'SNAP']="yes"
-    
+
+    #dummy up gender and SNAP for later
+    Patients['Male']=pd.get_dummies(Patients['Gender'],drop_first=True, dtype=float)
+    Patients['SNAP_yes']=pd.get_dummies(Patients['SNAP'], drop_first=True, dtype=float)
+
     return Patients
 
 
@@ -182,3 +189,121 @@ def runscatter(Patients):
         answer=answer.replace("CORRCOEF",f"{Patients['Risk_pct'].corr(Patients['Annual_med_costs']).round(2)}")
         print("\n")
         input(answer)
+        
+        
+        
+def OLSdemo(Patients):
+    ####Do a regression model and diagnostics
+    
+    # predictor = sm.add_constant(Patients['Risk_pct'])
+    # model=sm.OLS(Patients['Annual_med_costs'],predictor).fit()
+    # output=model.summary()
+    # print(output)
+    
+    #more covs
+    print("\n\n_____________________________________________\n\n")
+    
+    input(ws['I8'].value)
+    
+    model=smf.ols('Annual_med_costs~Risk_pct+Male+SNAP_yes',data=Patients)
+    output=model.fit()
+    print(output.summary())
+    
+    print("\n\n_____________________________________________\n\n")
+    
+    print("Above are the base model estimates.")
+          
+    
+    options=input(ws['I9'].value)
+    while options not in ['1','2','3','4']:
+            options=input("You have to enter a value from 1 to 4")
+    
+           
+    while options!='4':
+        if options=='1':
+        ##standardized coefs
+            Patients['Annual_med_costs_Beta']=stats.zscore(Patients['Annual_med_costs'])
+            
+            Patients['Risk_pct_Beta']=stats.zscore(Patients['Risk_pct'])
+            Patients['SNAP_yes_Beta']=stats.zscore(Patients['SNAP_yes'])
+            Patients['Male_Beta']=stats.zscore(Patients['Male'])
+            
+            
+            varliststd=Patients[['Risk_pct_Beta','SNAP_yes_Beta','Male_Beta']]
+            varliststd = sm.add_constant(varliststd)
+            varliststd_standardized = (varliststd - varliststd.mean()) / varliststd.std()
+            
+            # Fit the model
+            modelstd = sm.OLS(Patients['Annual_med_costs_Beta'], varliststd).fit()
+            outputstd=modelstd.summary()
+            print(outputstd)
+            
+            input("\n\n*********Press enter to go back to the menu*********")
+        
+        if options=='2':
+            print("\n\n_____________________________________________\n\n")
+            input("We'll start with a residual vs fitted plots and other similar tools. Press enter to show.")
+            diags = plt.figure(figsize=(12,8))
+            sm.graphics.plot_regress_exog(output, 'Risk_pct', fig=diags)
+            plt.show(diags)
+            
+            print("\n\n_____________________________________________\n\n")
+    
+            input("Press enter to show a graph of potential outliers using Cook's D. ")
+            fig = sm.graphics.influence_plot(output, criterion="cooks")
+            fig.tight_layout(pad=1.0)
+            plt.show(fig)
+            
+            print("\n\n_____________________________________________\n\n")
+    
+            input("Press enter to see the distribution of residuals")
+            resid=output.resid
+            sns.histplot(resid)
+            plt.title("Residual Error")
+            plt.show(fig)
+            print("\n\n_____________________________________________\n\n")
+    
+            input("\n\nPress enter to see results from the Breusch-Pagan Lagrangian multiplier test for heteroskedascticity ")
+            name = ['Lagrange multiplier statistic', 'p-value', 'f-value', 'f p-value']
+            test = sm.stats.het_breuschpagan(output.resid, output.model.exog)
+            print(lzip(name, test))
+            
+            input("\n\n*********Press enter to go back to the menu*********")
+        
+        if options=='3':
+            print("\n\n_____________________________________________\n\n")
+            print(ws['I10'].value)
+            input("\n\n*********Press enter to go back to the menu*********")
+    
+        print("\n\n_____________________________________________\n\n")
+    
+        options=input(ws['I9'].value)
+        while options not in ['1','2','3','4']:
+                options=input("You have to enter a value from 1 to 4")
+    print("\n\n_____________________________________________\n\n")
+    
+    input("Moving on, in light of those diagnostics we should fit the model with a square term for risk scores. \n\n Press enter to do that.")
+    
+    model=smf.ols('Annual_med_costs~Risk_pct+I(Risk_pct**2)+Male+SNAP_yes',data=Patients)
+    result=model.fit()
+    print(result.summary())
+    
+    print("\n\n_____________________________________________\n\n")
+    
+    #say we need to graph it
+    input(ws['I11'].value)
+    
+    
+    model=smf.ols('Annual_med_costs~Risk_pct+I(Risk_pct**2)',data=Patients)
+    result=model.fit()
+    
+    fig = sm.graphics.plot_fit(result,'Risk_pct', vlines=False)
+    plt.show(fig)
+    
+    print("\n\n_____________________________________________\n\n")
+    
+    #Conclude the section.
+    input(ws['I12'].value)
+    
+    
+    

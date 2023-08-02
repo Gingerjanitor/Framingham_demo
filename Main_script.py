@@ -13,9 +13,14 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import Risk_assign as risk
 from scipy.stats import chi2_contingency
-from time import sleep
 from openpyxl.workbook import workbook
 from openpyxl import load_workbook
+import statsmodels.api as sm
+from scipy import stats
+
+from statsmodels.compat import lzip
+import statsmodels.formula.api as smf
+import statsmodels.stats.api as sms
 
 sns.set_theme()
 
@@ -92,11 +97,13 @@ input("\n\nPress enter to continue")
 #Run Some analysis   # 
 ######################
 
-#gen new data
+####Generate the fake data
 
 print("\n\n_____________________________________________\n\n")
 
 Patients=analyze.gendata(Patients)
+
+####Show high risk patients
 
 print("\n\n_____________________________________________\n\n")
 
@@ -104,6 +111,7 @@ analyze.show_risky(Patients)
 
 print("\n\n_____________________________________________\n\n")
 
+####Run a cross tabulation
 
 analyze.crosstab(Patients)
 
@@ -111,77 +119,25 @@ analyze.crosstab(Patients)
 
 #################
       
-###make a couple histograms 
 
 print("\n\n_____________________________________________\n\n")
 
 ###press enter to continue###
+####Make a couple histograms
 
 analyze.makehistogram(Patients)
         
 print("\n\n_____________________________________________\n\n")
-
+####Do the scatter plot
 analyze.runscatter(Patients)
-##Mixing in gender
+
+
+
+####Do the continuos model demo
+analyze.OLSdemo(Patients)
 
 
 
 
 
-
-        
-    if showchi.lower()=="y":
-
-
-
-sns.regplot(x = "Risk_pct", y = "Annual_med_costs", data = Patients)
-plt.title("Correlation between Framingham scores \n and medical expenditures", fontsize=18)
-plt.xlabel("10-year risk %", fontsize=15)
-plt.ylabel("Annual medical expenditures", fontsize=15)
-plt.legend(["Female","Male"])
-          
-          
-          
-          
-          
-          
-          
-      The coloring of the dots highlights substantial gender differences in the Framingham scores, with men \
-      having a mean of {means['M'].round(1)} versus a mean of {means['F'].round(1)} for women \n. At first \
-      blush this is confusing, as authors such as Park and Pepine (2015) point out research that highlights that these data underestimate  \
-      women's risk of heart attacks. But this is because we're looking at the raw scores, not the corresponding 10-year risks. The calibration of \
-      the scores is such that women can earn much higher scores then men, but their risk is usually still lower. \n \n \
-     'to prove this to ourselves, we can plot them against each other and see that men have considerably higher 10-year \
-      risk despite lower framingham scores \n \n. ")
-          
-Print("All this indicates that we really need to control for sex in a final analysis!'")
-      
-hue=Patients['Genderdum']
-sns.set_theme()
-#sns.set_style("dark")
-sns.scatterplot(Patients,x='Risk_pct',y='Annual_med_costs',hue=hue, palette=("rocket"))
-plt.title("Correlation between Framingham scores \n and medical expenditures", fontsize=18)
-plt.xlabel("10-year risk %", fontsize=15)
-plt.ylabel("Annual medical expenditures", fontsize=15)
-plt.legend(["Female","Male"])
-
-hue=Patients['Genderdum']
-sns.set_theme()
-#sns.set_style("dark")
-sns.scatterplot(Patients,x='Risk_pct',y='Annual_med_costs',hue=hue, palette=("rocket"))
-plt.title("Correlation between Framingham scores \n and medical expenditures", fontsize=18)
-plt.xlabel("10-year risk %", fontsize=15)
-plt.ylabel("Annual medical expenditures", fontsize=15)
-plt.legend(["Female","Male"])
-
-##################
-
-hue=Patients['Highrisknum']
-sns.set_theme()
-#sns.set_style("dark")
-sns.scatterplot(Patients,x='Framingham',y='Annual_med_costs',hue=hue, palette=("rocket"))
-plt.title("Correlation between Framingham scores \n and medical expenditures", fontsize=18)
-plt.xlabel("Framingham score", fontsize=15)
-plt.ylabel("Annual medical expenditures", fontsize=15)
-plt.legend(["<15% risk","High risk"])
 
