@@ -16,10 +16,130 @@ import statsmodels.api as sm
 from statsmodels.compat import lzip
 import statsmodels.formula.api as smf
 import statsmodels.stats.api as sms
-
+import Scorers as scorer
+import Risk_assign as risk
+from tabulate import tabulate
 
 wb=load_workbook("C:/Users/Matt0/test project/Framingham score tool/Script.xlsx")
 ws=wb.active
+
+def enter_new():
+    print("Please enter some information so I can calculate the scores:\n")
+
+    name=str(input("What is the person's name?"))
+    
+    sex=str(input("What is the person's sex? M for male, F for female")).upper()
+    while sex.upper() not in ["M","F"]:
+        sex=str(input("\n You must enter either M or F here, as these scores are not validated in other groups. Use assigned sex at birth here. ")).upper()
+    
+    Cholesterol=int(input("What is the person's cholesterol level?"))
+    if (100>=Cholesterol) or (Cholesterol>=300):
+        Cholesterol=int(input("\n Typical cholesterol levels don't go below 100 or above 300, reenter the number to confirm."))
+    
+    HDL=int(input("What is their HDL cholesterol level?"))
+    if (20>=HDL) or (HDL>=100):
+        HDL=int(input("\n Typical HDL cholesterol levels don't go below 20 or above 100, reenter the number to confirm."))
+        
+    Systolic=int(input("What is their systolic blood pressure?"))
+    if (70>=Systolic) or (Systolic>=180):
+        Systolic=int(input("\n Looking at these numbers, the person might be in serious distress. Please get them help and reenter to confirm or fix the entry. "))
+    
+    Treated=input("Are they being treated for high blood pressure medications? Enter yes or no").capitalize()
+    while Treated.capitalize() not in ["Yes","No"]:
+        Treated=str(input("\n You must enter either yes or no here.")).capitalize()
+        
+    Smoking=str(input("Are they currently a smoker? Enter yes or no")).capitalize()
+    while Smoking.capitalize() not in ["Yes","No"]:
+        Smoking=str(input("\n You must enter either yes or no here.")).capitalize()
+    
+    Age=int(input("What is their age?"))
+    if (Age<30) or (Age>80):
+        Age=int(input("These scores are not validated for people below 70 or older than 30. To continue, enter either 30 or 70 in place for a rough estimate."))
+        
+    NewPat=pd.DataFrame([[name,sex,Cholesterol,HDL,Systolic,Treated,Smoking, Age]],columns=['Name','Gender', 'Cholest', "HDL", "Systolic", "Treat","Smoke","Age"])
+    
+    
+    NewPat, YourRaws=calc_all(NewPat)
+    
+    NewPat=pd.concat([NewPat,risk.risk_assign(NewPat['Framingham'],NewPat['Gender'])],axis=1)
+
+
+    print("\n\n *****************")
+    print(f"Name: {NewPat['Name'][0]}")
+    print(f"Sex: {NewPat['Gender'][0]}\n")
+    print(tabulate([["Indicator","Original", "Scored"],
+                    ["Age", float(NewPat['Age'].iloc[0]), float(YourRaws['age_scr'].iloc[0])],
+                    ["Total Cholesterol" ,float(NewPat['Cholest'].iloc[0]), float(YourRaws['cholest_scr'].iloc[0])],
+                    ["HDL Cholesterol",float(NewPat['HDL'].iloc[0]), float(YourRaws['hdl_scr'].iloc[0])],
+                    ["Smoker Status", NewPat['Smoke'].iloc[0],float(YourRaws['smoke_scr'].iloc[0])],
+                    ["Systolic BP", float(NewPat['Systolic'].iloc[0]),float(YourRaws['systol_scr'].iloc[0])],
+                     ],headers="firstrow"))
+    print("\n")
+    print(tabulate([["Framingham Score","10-year Risk of CVD"],
+                    [NewPat['Framingham'].loc[0],f"{NewPat['Risk_pct'].loc[0]}%"]],
+                   headers="firstrow"))
+def calc_all(Patients):
+
+    rawscores=pd.DataFrame()
+    rawscores['age_scr']=scorer.age_scorer(Patients)
+    rawscores['cholest_scr']=scorer.cholest_scorer(Patients)
+    rawscores['hdl_scr']=scorer.hdl_scorer(Patients)
+    
+    rawscores['smoke_scr']=scorer.smoke_scorer(Patients)
+    rawscores['systol_scr']=scorer.systolic_scorer(Patients)
+    
+    Patients['Framingham']=rawscores.sum(axis=1)
+    return Patients, rawscores
+
+def demonstrate():
+    Patients=pd.read_csv(r"C:\Users\Matt0\test project\Framingham score tool\Framingham practice more.txt").rename(
+        columns={'Total_Cholesterol':'Cholest','HDL_Cholesterol':'HDL',
+                 'Smoking_Status':'Smoke', 'Systolic_Blood_Pressure':'Systolic',
+                 'Treatment_for_High_BP':'Treat'})
+    #purge missings if any
+    
+    #introduce the data
+    print("\n\n_____________________________________________\n\n")
+
+    print(ws["C2"].value)
+    
+    print("\n\n_____________________________________________\n\n")
+    
+    print(Patients.head(5))
+    input("\n\nPress enter to start calculating the Framingham scores")
+    
+    Patients,rawscores=calc_all(Patients)
+    
+    print("\n\n_____________________________________________\n\n")
+    
+    #introduce the score set
+    print(f"""{ws["C3"].value}\n\n""")
+    
+    print(rawscores.head(5))
+    
+    input("\n\nPress enter to continue")
+    
+    print("\n\n_____________________________________________\n\n")
+    print("\n\n The rows are then combined and merged into the main dataset\n\n")
+    print(Patients.head(5))
+    
+    input("\n\nPress enter to continue")
+    
+    ###compute risk tiers
+    
+    Patients=pd.concat([Patients,risk.risk_assign(Patients['Framingham'],Patients['Gender'])],axis=1)
+    
+    print("\n\n_____________________________________________\n\n")
+    
+    
+    print(f"""\n\n{ws["C4"].value}\n\n""")
+    
+    print(Patients[['Gender', 'Framingham','Risk_pct','Riskcats','Highrisk']].head(5))
+    
+    print("\n\nThats it! Now the numbers can be used for analysis.")
+    input("\n\n ******Press enter to go back to the main hub.******")
+
+#pd.DataFrame.to_csv(Patients,"almost prepared data")    
 
 def gendata(Patients):
     np.random.seed(29293)
@@ -53,98 +173,89 @@ def show_risky(Patients):
     ##sns.histogram(Patients, x='Framingham')
     text=ws['E2'].value
     text= text.replace("{len(atrisk)}",f'{len(atrisk)}')
-    showrisk=input(text)
-    while showrisk.lower() not in ['y','n']:
-        showrisk=str(input("Please enter either Y or N \n"))
-    
-    if showrisk.lower()=="y":
-        print("\n\n_____________________________________________\n\n")
-        header="The following patients IDs have above 20% estimated risk of coronary heart disease in the next decade. \n\n Below is each ID and risk % \n"
-        header=header.center(45)
-        print(header)
-        for case in atrisk.itertuples():
-            print(f'Patient ID: {case[1]}, risk of {case[2]}%')
+    input(text)
+    print("\n\n_____________________________________________\n\n")
+    header="The following patients IDs have above 20% estimated risk of coronary heart disease in the next decade. \n\n Below is each ID and risk % \n"
+    header=header.center(45)
+    print(header)
+    for case in atrisk.itertuples():
+        print(f'Patient ID: {case[1]}, risk of {case[2]}%')
             
-        input("\n\n Press enter when you're finished")
+    input("\n\n ******Press enter to go back to the main hub.******")
 
 def crosstab(Patients):
 ### A cross tab and chi square:
         
-    showchi=input(ws['G2'].value)
-    while showchi.lower() not in ['y','n']:
-        showchi=str(input("Please enter either Y or N \n"))
-    
-    if showchi.lower()=="y":
-        print("\n\n_____________________________________________\n\n")  
-        print("Here's a cross tab of risk scores and SNAP values, calculating percentages along columns. \n\n")
-        nopct=pd.crosstab(Patients['Highrisk'],Patients['SNAP'])
-        chi, p, df, expected= chi2_contingency(nopct)
-        tab=(pd.crosstab(Patients['Highrisk'],Patients['SNAP'],normalize='columns').round(4)*100)
-        cramersv=np.sqrt((chi/len(Patients['SNAP']*(len(tab)-1))))
-        print(tab)
-        
-        print(f"\nChi-Square= {chi.round(2)}, p= {p.round(3)}")
-        print(f"Cramer's V= {cramersv.round(3)}")
+    input(ws['G2'].value)
 
     
-        explain=str(input("\n Shall I provide an interpretation of these results and next steps? Enter Y or N?\n"))
-        while explain.lower() not in ['y','n']:
-            
-            explain=str(input("Please enter either Y or N \n"))
+    print("\n\n_____________________________________________\n\n")  
+    print("Here's a cross tab of risk scores and SNAP values, calculating percentages along columns. \n\n")
+    nopct=pd.crosstab(Patients['Highrisk'],Patients['SNAP'])
+    chi, p, df, expected= chi2_contingency(nopct)
+    tab=(pd.crosstab(Patients['Highrisk'],Patients['SNAP'],normalize='columns').round(4)*100)
+    cramersv=np.sqrt((chi/len(Patients['SNAP']*(len(tab)-1))))
+    print(tab)
     
-        if explain.lower()=="y":
-            print("\n\n_____________________________________________\n\n")
-            print(ws['G3'].value)
-            input("\n\n Press enter when you're finished")
+    print(f"\nChi-Square= {chi.round(2)}, p= {p.round(3)}")
+    print(f"Cramer's V= {cramersv.round(3)}")
+
+    
+    explain=str(input("\n Shall I provide an interpretation of these results and next steps? Y for yes, N to go back to the menu\n"))
+    while explain.lower() not in ['y','n']:
+        
+        explain=str(input("Please enter either Y or N \n"))
+
+    if explain.lower()=="y":
+        print("\n\n_____________________________________________\n\n")
+        print(ws['G3'].value)
+        input("\n\n ******Press enter to go back to the main hub.******")
 
 def makehistogram(Patients):
         
-    costanalysis=input(ws['I2'].value)
-    while costanalysis.lower() not in ['y','n']:
-        costanalysis=str(input("Please enter either Y or N \n"))
+    input(ws['I2'].value)
+
+    print("\n\n_____________________________________________\n\n")  
+    print("First, it is important to examine distributions for both variables.\n\n")
+      
+    plt.rcParams["figure.figsize"] = [7.00, 3.50]
+    plt.rcParams["figure.autolayout"] = True
+    f, axes = plt.subplots(1, 2)
     
-    if costanalysis.lower()=="y":
-        print("\n\n_____________________________________________\n\n")  
-        print("First, it is important to examine distributions for both variables.\n\n")
-          
-        plt.rcParams["figure.figsize"] = [7.00, 3.50]
-        plt.rcParams["figure.autolayout"] = True
-        f, axes = plt.subplots(1, 2)
-        
-        sns.histplot(data=Patients,
-                     x='Risk_pct',
-                     bins=20,
-                     ax=axes[0])
-        axes[0].set_xlabel("10-year risk %")
-        axes[0].set_title("Framingham Risk Estimate Distribution")
-        axes[0].axvline(x=Patients['Risk_pct'].mean(),color='red')
-        axes[0].axvline(x=Patients['Risk_pct'].median(),color='blue')
-        
-        sns.histplot(Patients['Annual_med_costs'],
-                     bins=20,
-                     ax=axes[1])
-        axes[1].set_title("Annual Medical Costs Distribution")
-        axes[1].set_xlabel("$ Spent Per Year")
-        axes[1].axvline(x=Patients['Annual_med_costs'].mean(),color='red')
-        axes[1].axvline(x=Patients['Annual_med_costs'].median(),color='blue')
-        
-        plt.show()
-        
-        explain=str(input("\n Would you like an explanation of these graphs? Enter Y or N?\n"))
-        while explain.lower() not in ['y','n']:
-            
-            explain=str(input("Please enter either Y or N \n"))
+    sns.histplot(data=Patients,
+                 x='Risk_pct',
+                 bins=20,
+                 ax=axes[0])
+    axes[0].set_xlabel("10-year risk %")
+    axes[0].set_title("Framingham Risk Estimate Distribution")
+    axes[0].axvline(x=Patients['Risk_pct'].mean(),color='red')
+    axes[0].axvline(x=Patients['Risk_pct'].median(),color='blue')
     
-        if explain.lower()=="y":
-            print("\n\n_____________________________________________\n\n")
-            explanation=ws['I3'].value
-            mean=int(Patients['Annual_med_costs'].mean())
-            std=int(Patients['Annual_med_costs'].std())
-            stdrange=int(std*1.96)
-            explanation=explanation.replace('PATIENTMEAN',f'${mean}')
-            explanation=explanation.replace('PATIENTSTD',f'${std}')
-            explanation=explanation.replace('STDRANGE',f'${stdrange}')
-            input(explanation)
+    sns.histplot(Patients['Annual_med_costs'],
+                 bins=20,
+                 ax=axes[1])
+    axes[1].set_title("Annual Medical Costs Distribution")
+    axes[1].set_xlabel("$ Spent Per Year")
+    axes[1].axvline(x=Patients['Annual_med_costs'].mean(),color='red')
+    axes[1].axvline(x=Patients['Annual_med_costs'].median(),color='blue')
+    
+    plt.show()
+    
+    explain=str(input("\n Would you like an explanation of these graphs? Enter Y or N?\n"))
+    while explain.lower() not in ['y','n']:
+        
+        explain=str(input("Please enter either Y or N \n"))
+
+    if explain.lower()=="y":
+        print("\n\n_____________________________________________\n\n")
+        explanation=ws['I3'].value
+        mean=int(Patients['Annual_med_costs'].mean())
+        std=int(Patients['Annual_med_costs'].std())
+        stdrange=int(std*1.96)
+        explanation=explanation.replace('PATIENTMEAN',f'${mean}')
+        explanation=explanation.replace('PATIENTSTD',f'${std}')
+        explanation=explanation.replace('STDRANGE',f'${stdrange}')
+        input(explanation)
             
 def runscatter(Patients):
     
@@ -238,7 +349,7 @@ def OLSdemo(Patients):
             outputstd=modelstd.summary()
             print(outputstd)
             
-            input("\n\n*********Press enter to go back to the menu*********")
+            input("\n\n*********Press enter to go back to the regression menu*********")
         
         if options=='2':
             print("\n\n_____________________________________________\n\n")
@@ -268,12 +379,12 @@ def OLSdemo(Patients):
             test = sm.stats.het_breuschpagan(output.resid, output.model.exog)
             print(lzip(name, test))
             
-            input("\n\n*********Press enter to go back to the menu*********")
+            input("\n\n*********Press enter to go back to the regression menu*********")
         
         if options=='3':
             print("\n\n_____________________________________________\n\n")
             print(ws['I10'].value)
-            input("\n\n*********Press enter to go back to the menu*********")
+            input("\n\n*********Press enter to go back to the regression menu*********")
     
         print("\n\n_____________________________________________\n\n")
     
@@ -283,6 +394,16 @@ def OLSdemo(Patients):
     print("\n\n_____________________________________________\n\n")
     
     input("Moving on, in light of those diagnostics we should fit the model with a square term for risk scores. \n\n Press enter to do that.")
+    
+    ###purge outliers
+    
+    
+    influence = output.get_influence()
+    rawcooks= influence.cooks_distance
+    Patients['cooks']=rawcooks[0]
+    #Patients['cooks'].astype()
+    Patients.loc[Patients['cooks']>.016]=np.nan
+    del [influence,rawcooks]
     
     model=smf.ols('Annual_med_costs~Risk_pct+I(Risk_pct**2)+Male+SNAP_yes',data=Patients)
     result=model.fit()
