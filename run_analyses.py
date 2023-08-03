@@ -26,35 +26,35 @@ ws=wb.active
 def enter_new():
     print("Please enter some information so I can calculate the scores:\n")
 
-    name=str(input("What is the person's name?"))
+    name=str(input("What is the person's name?  "))
     
-    sex=str(input("What is the person's sex? M for male, F for female")).upper()
+    sex=str(input("What is the person's sex? M for male, F for female  ")).upper()
     while sex.upper() not in ["M","F"]:
-        sex=str(input("\n You must enter either M or F here, as these scores are not validated in other groups. Use assigned sex at birth here. ")).upper()
+        sex=str(input("\n You must enter either M or F here, as these scores are not validated in other groups. Use assigned sex at birth here.  ")).upper()
     
-    Cholesterol=int(input("What is the person's cholesterol level?"))
+    Cholesterol=int(input("What is the person's cholesterol level?  "))
     if (100>=Cholesterol) or (Cholesterol>=300):
-        Cholesterol=int(input("\n Typical cholesterol levels don't go below 100 or above 300, reenter the number to confirm."))
+        Cholesterol=int(input("\n Typical cholesterol levels don't go below 100 or above 300, reenter the number to confirm.  "))
     
-    HDL=int(input("What is their HDL cholesterol level?"))
+    HDL=int(input("What is their HDL cholesterol level?  "))
     if (20>=HDL) or (HDL>=100):
-        HDL=int(input("\n Typical HDL cholesterol levels don't go below 20 or above 100, reenter the number to confirm."))
+        HDL=int(input("\n Typical HDL cholesterol levels don't go below 20 or above 100, reenter the number to confirm.  "))
         
-    Systolic=int(input("What is their systolic blood pressure?"))
+    Systolic=int(input("What is their systolic blood pressure?  "))
     if (70>=Systolic) or (Systolic>=180):
         Systolic=int(input("\n Looking at these numbers, the person might be in serious distress. Please get them help and reenter to confirm or fix the entry. "))
     
-    Treated=input("Are they being treated for high blood pressure medications? Enter yes or no").capitalize()
+    Treated=input("Are they being treated for high blood pressure medications? Enter yes or no  ").capitalize()
     while Treated.capitalize() not in ["Yes","No"]:
-        Treated=str(input("\n You must enter either yes or no here.")).capitalize()
+        Treated=str(input("\n You must enter either yes or no here.  ")).capitalize()
         
-    Smoking=str(input("Are they currently a smoker? Enter yes or no")).capitalize()
+    Smoking=str(input("Are they currently a smoker? Enter yes or no.  ")).capitalize()
     while Smoking.capitalize() not in ["Yes","No"]:
-        Smoking=str(input("\n You must enter either yes or no here.")).capitalize()
+        Smoking=str(input("\n You must enter either yes or no here.  ")).capitalize()
     
-    Age=int(input("What is their age?"))
+    Age=int(input("What is their age?  "))
     if (Age<30) or (Age>80):
-        Age=int(input("These scores are not validated for people below 70 or older than 30. To continue, enter either 30 or 70 in place for a rough estimate."))
+        Age=int(input("These scores are not validated for people below 70 or older than 30. To continue, enter either 30 or 70 in place for a rough estimate.  "))
         
     NewPat=pd.DataFrame([[name,sex,Cholesterol,HDL,Systolic,Treated,Smoking, Age]],columns=['Name','Gender', 'Cholest', "HDL", "Systolic", "Treat","Smoke","Age"])
     
