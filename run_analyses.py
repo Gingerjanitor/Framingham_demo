@@ -19,8 +19,17 @@ import statsmodels.stats.api as sms
 import Scorers as scorer
 import Risk_assign as risk
 from tabulate import tabulate
+from pathlib import Path
 
-wb=load_workbook("C:/Users/Matt0/test project/Framingham score tool/Script.xlsx")
+
+current_dir=Path.cwd()
+file_names=["Script.xlsx","Framingham practice more.txt"]
+
+script_path=current_dir / file_names[0]
+data_path= current_dir / file_names[1]
+
+
+wb=load_workbook(script_path)
 ws=wb.active
 
 def enter_new():

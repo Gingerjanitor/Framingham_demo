@@ -18,7 +18,7 @@ from openpyxl.workbook import workbook
 from openpyxl import load_workbook
 import statsmodels.api as sm
 from scipy import stats
-
+from pathlib import Path
 from statsmodels.compat import lzip
 import statsmodels.formula.api as smf
 import statsmodels.stats.api as sms
@@ -28,8 +28,14 @@ sns.set_theme()
 
 #####INITIALIZING
 
+current_dir=Path.cwd()
+file_names=["Script.xlsx","Framingham practice more.txt"]
+
+script_path=current_dir / file_names[0]
+data_path= current_dir / file_names[1]
+
 #import the data
-Patients=pd.read_csv(r"C:\Users\Matt0\test project\Framingham score tool\Framingham practice more.txt").rename(
+Patients=pd.read_csv(data_path).rename(
     columns={'Total_Cholesterol':'Cholest','HDL_Cholesterol':'HDL',
              'Smoking_Status':'Smoke', 'Systolic_Blood_Pressure':'Systolic',
              'Treatment_for_High_BP':'Treat'})
@@ -37,7 +43,7 @@ Patients=pd.read_csv(r"C:\Users\Matt0\test project\Framingham score tool\Framing
 Patients.dropna()
 
 #load the work book with the script
-wb=load_workbook("C:/Users/Matt0/test project/Framingham score tool/Script.xlsx")
+wb=load_workbook(script_path)
 ws=wb.active
 
 ##quieetly prepare the data
